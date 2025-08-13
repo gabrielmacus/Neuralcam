@@ -1,0 +1,22 @@
+---
+description: testing
+globs: 
+alwaysApply: false
+---
+Encargado del testing, desde unit testing a e2e
+
+- Para los tests, se replica la estructura de carpetas de src (ve las reglas de backed). Ej: si se desea testear /src/Contexts/Recording/RecordingSessions/Domain/Services/RecordingServices.py, debes generar el archivo de testing /tests/Contexts/Recording/RecordingSessions/Domain/Services/TestRecordingServices.py
+- Utiliza el patrón object mother para testing
+- Las clases object mother correspondientes a los value objects deben estar en /tests/Contexts/{contexto}/{módulo}/Domain/Mothers/ValueObjects y las correspondientes a las entidades en /tests/Contexts/{contexto}/{módulo}/{capa}/Mothers. Ej: /tests/Contexts/Recording/RecordingSessions/Domain/Mothers/RecordingSessionMother.py, /tests/Contexts/Recording/RecordingSessions/Domain/Mothers/ValueObjects/RecordingSessionDurationMother.py 
+- Las clases object mother para value objects deben tener un método estático "create" que reciba el o los primitivos correspondientes al value object como parámetros opcionales, de manera que si no los recibe, instancie el value object con un valor random. Para el caso del object mother correspondiente a entidades, deben recibir los parámetros de la entidad como primitivos, también opcionales, de manera que se usen los parámetros recibidos para instanciar la entidad, y los que no se reciben, se generen a través de los objects mothers de los value objects correspondientes.
+- El testing unitario abarca las capas aplicación y dominio
+- El testing de integración abarca la capa infraestructura
+- Utiliza el patrón given when then
+- Utiliza la libreria pytest en un módulo con funciones sueltas, no tipo clase.
+- Si hay código que se puede refactorizar en una función en los tests, hazlo. Ej: Si tengo en múltiples tests que una función debe devolver algo, puedo encapsular ese código en la función given_x_returns, o como ejemplo concreto: given_repository_find_by_id_returns(id, returned_value). También debes intentar encapsular los then, ejemplo: then_repository_save_should_have_been_called_with
+- Verifica el orden de las llamadas en los tests unitarios cuando sea necesario. Por ejemplo, si hablamos de una operacion de la cual cuyo orden depende el resultado. Ej: si tengo que enviar el código de confirmación al usuario por email luego de que se registre, no debería primero llamar a la función de enviar el email, y luego guardar el usuario en la base de datos.
+-  Testing de orden específico: Para verificar llamadas en orden específico, crear funciones que construyan y devuelvan listas de llamadas esperadas, no funciones que hagan aserciones directamente. Esto permite manejar escenarios no lineales (fallos, excepciones) y componer diferentes secuencias de llamadas usando extend() y append().
+- No utilices ANY (python) o similar según el lenguaje para chequear el tipo de parámetro recibido por una función. Siempre chequea tipos concretos, salvo excepciones, que debes informarme. Una excepción posible puede ser ANY en el tiempo de ocurrencia de un evento.
+- Si necesitas recursos (ej: videos, imágenes, etc) para los tests de integración, debes ubicarlos en /tests/Contexts/{contexto}/{módulo}/Infraestructure/Resources.
+- No testees las llamadas al logger.
+- Testea casos limite, intermedios y excepciones arrojadas.

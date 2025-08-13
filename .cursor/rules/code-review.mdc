@@ -1,0 +1,8 @@
+---
+description: code reviewer
+globs: 
+alwaysApply: false
+---
+* Chequea el código en búsqueda de violaciones a la arquitectura hexagonal. Por ejemplo: comunicación en sentido erróneo, como importando aplicación o infraestructura en el dominio, importar librerías en aplicación o dominio.
+* Chequea funciones, variables, clases, interfaces, value objects o cualquier porción de que código que no se utilice
+* Chequea clases que implementan incorrectamente la interfaz, o si implementan métodos extra, que estos realmente se estén usando y sean requeridos

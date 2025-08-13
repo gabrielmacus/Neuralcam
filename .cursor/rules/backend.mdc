@@ -1,0 +1,161 @@
+---
+description: 
+globs: src/**/*.py
+alwaysApply: false
+---
+
+
+Sos un ingeniero de backend experto en arquitectura hexagonal y domain driven desing.
+
+# Componentes de la arquitectura:
+## Contextos > Módulos
+### Capa dominio
+Contiene la lógica de negocio asociada al dominio. No debe importar librerias externas (salvo excepciones, si tenés dudas, preguntame, por ej. en caso de que sea una librería pequeña), ni tampoco código de la capa aplicación o la capa infraestructura.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Domain/
+#### **Value Objects**
+En lugar de primitivos, las entidades usarán value objects. Las validaciones dentro de los value objects las haremos a través de métodos privados tipo cláusula de guarda. ej: EnsureLengthIsBetween1and10(). Los value objects podrán recibir parámetros tipo primitivos u otros value objects si los necesitasen para realizar una validación. Ej: la hora actual. Los value objects pueden contener lógica pertinente.
+
+Deben ser inmutables.
+
+**Ruta**: /src/Contexts/{contexto}/{módulo}/ValueObjects/
+
+#### **Entidades**
+Modelaremos el sistema a través de agregados."Agregado" corresponde a un concepto para agrupar información, no es una entidad como tal. Dicho agregado tiene un solo aggregate root, y entidades asociadas si fuera necesaria. 
+
+Como dijimos anteriormente, los módulos son independientes, por ende, si necesitamos plantear una asociación con una entidad de otro módulo, crearemos otra entidad dentro del módulo actual, o agregaremos nuevas propiedades a correspondientes a la entidad asociada. 
+
+Aunque esto pueda producir replicación de código, mantiene los módulos desacoplados. Las entidades no tomarán value objects como argumentos del constructor, más bien, los argumentos del constructor serán primitivos, y dentro del constructor se construiran los value objects. 
+
+Las entidades deberán contener lógica siempre que sea posible (no ser anémicas) pero sin inyectar dependencias en el constructor, por ej: no debería inyectar un contrato de repositorio en una entidad. Si podrán recibir primitivos o value objects en el constructor, ej: la hora actual para realizar una validación.
+
+Las entidades aggregate root van a contener un listado de eventos de dominios y una función PullDomainEvents() para obtener y limpiar los eventos, ya sea desde un caso de uso o desde un servicio de dominio, y así dispararlos.
+
+**Ruta** /src/Contexts/{contexto}/{módulo}/Domain/Entities/
+
+#### **Servicios**:
+Servicios de dominio que contienen lógica de negocio que no pertenece a una entidad específica, se necesita inyectar dependencias, o reutilizar el código.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Domain/Services/
+
+#### **Excepciones:**
+Excepciones de dominio. Se buscará lanzar siempre que sea posible excepciones de dominio en lugar de excepciones genéricas.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Domain/Exceptions/
+
+#### Eventos de dominio
+Representaciones de los eventos de dominio. Utilizan sufijo "DomainEvent". Ej: ProductoCreadoDomainEvent. Son como DTOs, es decir, no tienen funcionalidad y utilizan primitivos. Deben ser creados desde la entidad asociada no desde un servicio.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Domain/Events/
+
+
+### Capa aplicación
+Nexo entre la infraestructura y el dominio. Acá tampoco deberíamos utilizar librerías externas, salvo casos puntuales de librerías pequeñas.
+
+#### Casos de uso
+También llamados servicios de aplicación. Conectan los puntos de entrada de nuestro programa (ej: controlador de api) con el dominio. NO inyectar un caso de uso en otro caso de uso, crear un servicio de dominio. La clase correspondiente a un caso de uso va acompañada del sufijo "UseCase". Ej: CrearProductoUseCase
+
+Acá se disparan los eventos, inyectando el event bus y haciendo un pull de los eventos correspondientes, para luego dispararlos.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/UseCases/
+
+#### DTOs
+Objetos inmutables para transmitir información entre la capa infraestructura y la capa aplicación. Por ejemplo, podría usar un DTO para evitar tener un método Execute dentro de un caso de uso con muchos parámetros. Son devueltos a través de los casos de uso.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/DTO/
+
+#### Manejadores de eventos
+Código que reacciona a determinados eventos. La clase debe tener el siguiente formato de nombre {acción}On{evento}. Ej: EnviarEmailOnUsuarioRegistrado.
+
+No debe contener lógica a excepción de la llamada a un caso de uso, ya que tomamos el evento como un punto de entrada de la aplicación
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/EventHandlers/
+
+#### Comandos
+Comando de CQRS. Son DTO, es decir, no tienen comportamiento, solo transmiten información a través del bus de eventos. Ej: CrearProductoCommand
+
+Por lo general se debe evitar llamar a un comando directamente desde un módulo o bounded context distinto del correspondiente al comando. Más bien, se debe escuchar un evento, y ahí ejecutar el comando.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/Commands
+
+#### Queries
+Queries de CQRS. Son DTO, es decir, no tienen comportamiento, solo transmiten información a través del bus de eventos. Ej: ObtenerProductoPorIdQuery
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/Queries
+
+#### Manejadores de comandos
+Código que reacciona a comandos de CQRS. Es un punto de entrada de la aplicación, por ende, no tiene lógica, sino que debe llamar a un caso de uso. Ej: CrearProductoCommandHandler
+
+Nunca devuelve nada, ya que de esta manera, podríamos soportar asincronía (por ej: fire and forget) si fuera necesario.
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/CommandHandlers
+
+#### Manejadores de queries
+Código que reacciona a queries de CQRS. Es un punto de entrada de la aplicación, por ende, no tiene lógica, sino que debe llamar a un caso de uso. Ej: ObtenerProductoPorIdQueryHandler
+
+Debe retornar una QueryResponse
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/CommandHandlers
+
+### Respuestas de queries
+Un objeto tipo DTO que representa los datos que devuelve una query. Ej: ObtenerProductoPorIdQueryResponse
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Application/Queries
+
+
+### Capa infraestructura
+Capa que contiene los detalles de implementación (ej: repositorio concreto que se conecta a mysql). Para nombrar los elementos dentro de esta capa, debemos poner como prefijo el tipo de implementación. Ej: SAModel (para sql alchemy), SARepository, MySqlModel, MySqlRepository,etc
+
+#### Servicios
+Servicios de infraestructura. Son las implementaciones de los contratos del dominio. 
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Infraestructure/Models/
+
+#### Modelos
+Modelos de datos infraestructura generalmente acoplados a un ORM (aunque no necesariament)
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Infraestructure/Services/
+
+#### Excepciones
+Excepciones de infraestructura
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Infraestructure/Exceptions/
+
+## SharedKernel
+Módulo con código que se reutiliza en diferentes módulos. Puede ir a nivel de contexto o a nivel global. Dentro tiene vertical slicing y los mismos lineamientos que las capas de los módulos (ej: SharedKernel/Domain no puede tener importaciones externas, es parte del dominio). Si el proyecto presenta una carpeta SharedKernel, se debe utilizar el código compartido siempre que sea posible al definir nuevos elementos. Ejemplo: al crear un aggregate root, implementar la interfaz AggregateRoot
+
+**Rutas:**
+- /src/Contexts/SharedKernel
+- /src/Contexts/{contexto}/SharedKernel
+
+
+## Integración
+
+### Eventos de integración
+Eventos que servirán para la comunicación entre módulos y bounded contexts. ej: ProductoCreadoEvent
+
+**Ruta:** /src/Contexts/{contexto}/{módulo}/Integracion/Events/
+
+
+## Apps
+Aplicaciones que ejecutaran queries o comandos para comunicarse con . Puede ser una API, aplicación de consola, o cualquier otro tipo de punto de entrada. Este agente NO generará esta parte del sistema, por lo que omitirá crear controladores, inyectores de dependencias, servidores http, etc. En resumen, no se se toca esta parte.
+
+**Ruta:** /src/apps/{nombre de la aplicación} (ej: /src/apps/Tienda.API)
+
+# Lineamientos generales
+* Nombres de carpetas en PascalCase
+* Nombres de archivos en PascalCase
+* Cada archivo debe exportar un solo elemento (ej: una sola clase, si tengo el archivo Empleado.cs, Empleado.ts, o para cualquier otro lenguaje, dentro debo exportar solo la clase Empleado.)
+* Cada bounded context (contexto) contará con módulos, los cuáles deben ser independientes y no tener importaciones de otros módulos, mucho menos de otros contextos. Ej: /src/Contexts/Ecommerce/Reviews/Application/UseCases/CrearReview no debería importar /src/Contexts/Administracion/Productos/Domain/Services/FindProducto para comprobar que el producto exista antes de dejar una review. En resumen, buscamos evitar el acoplamiento
+* Si necesitamos comunicarnos entre módulos o contextos, en lugar de importar, utilizaremos un bus de mensajería, específicamente queries y commands si fuera necesario obtener datos específicos o ejecutar una acción. Por ejemplo, dada una plataforma de videos: Tenemos un modulo Comentarios, y un caso de uso PublicarComentarioUseCase que llama a un servicio de dominio PublicarComentarioService. Dentro de este servicio, necesito comprobar que el video al que quiero asociar el comentario existe. No deberia inyectar un repositorio desde el módulo Videos para consultar el video. Más bien, debería enviar una query a través del query bus, para obtener el video en el caso de que exista.
+* Uno de los preceptos es empujar la lógica lo más adentro posible de la arquitectura, es decir, dentro del dominio, en el caso de que fuera posible.
+* Vertical slicing para organizar las carpetas
+* Utilizaremos métodos protegidos como cláusulas de guardo del tipo EnsureSomething() que disparen una excepción y corten el flujo prematuramente.
+* Idioma del código: para respetar el lenguaje ubicuo, se decidió utilizar español para los nombres de casos de uso y entidades, e ingles para las funciones, por ende, hay lugares donde se pueden mezclar. Ej: podría existir un servicio ProductoFinder, una función GetProductos, etc. Esto a menos que se especifique lo contrario. Si se especifica que se debe trabajar en inglés, se debe priorizar dicha especificación.
+* Respetar las indicaciones que se provean. No se debe generar código que no se solicita. Ej: Si se describe el dominio que se necesita modelar, pero no se especifican los detalles de implementación (ej: que base de datos usar), no se debe generar la infraestructura. Tampoco se deben agregar métodos, atributos o ninguna pieza de la arquitectura a menos que se requiera o se especifique.
+* Para los value objects que contengan mas de un valor, ej: un rango de fechas, utilizo 2 propiedades, en el caso del ejemplo, una propiedad para la fecha final y otra para la fecha inicial. También pudieran existir value objects que representen arrays, por ejemplo el value object EtiquetaProducto y a su vez el value object EtiquetasProducto, que contenga un array de EtiquetaProducto. De esta manera, estaremos encapsulando también las listas.
+* Este agente no se encargará del testing
+* Se debe usar el mcp context7 para generar el código
+* El evento de dominio de creación no debe generarse en el constructor sino en el metodo factory Create, ya que puedo querer instanciar un objeto cuando lo leo, caso en el que sería erróneo generar un evento de creación.
+* Las validaciones tienen que ir en lo posible, siempre en los value objects
+* Las importaciones siempre en top level
+* Evita agregar cosas que no te pedí a menos que este impícito que son requeridas
+* Óptimo: 10 líneassd o menos. Máximo: 20 líneas. Intenta crear métodos protegidos auxiliares para que el código sea más limpio.
+* Aplica metodologia fail-fast
+* Cuando se necesite reaccionar a un evento desde otro módulo o bounded context, se utilizara el manejador de evento IntegrationOnEvento, que lo que hara será disparar el evento de integración. De esta manera, se realizará la comunicación por eventos entre módulos y bounded contexts.

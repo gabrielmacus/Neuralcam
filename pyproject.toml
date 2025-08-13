@@ -1,0 +1,66 @@
+[build-system]
+requires = [ "setuptools>=61.0",]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuralcam"
+version = "0.1.0"
+description = "Neural Camera Recording System"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [ "av>=12.0.0", "testcontainers>=4.12.0"]
+[[project.authors]]
+name = "Gabriel"
+email = "gabriel@example.com"
+
+[project.optional-dependencies]
+dev = [ "black>=23.0.0", "flake8>=6.0.0", "isort>=5.12.0", "pyright>=1.1.0", "pytest>=7.0.0"]
+
+[tool.pyright]
+include = [ "src", "tests",]
+exclude = [ "**/__pycache__", "**/*.pyc",]
+reportMissingImports = true
+reportMissingTypeStubs = false
+pythonVersion = "3.12"
+pythonPlatform = "Linux"
+typeCheckingMode = "basic"
+reportUnusedImports = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+reportUnnecessaryCast = true
+reportUnnecessaryTypeIgnoreComment = true
+reportImportCycles = true
+reportPrivateUsage = true
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+[[tool.pyright.executionEnvironments]]
+root = "."
+pythonPath = "src"
+
+[tool.black]
+line-length = 100
+target-version = [ "py312",]
+include = "\\.pyi?$"
+extend-exclude = "/(\n  # directories\n  \\.eggs\n  | \\.git\n  | \\.hg\n  | \\.mypy_cache\n  | \\.tox\n  | \\.venv\n  | build\n  | dist\n)/\n"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+src_paths = [ "src", "tests",]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py", "*_test.py", "Test*.py"]
+python_classes = ["Test*", "*Test"]
+python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "e2e: marks tests as end-to-end tests"
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = "E203, W503"
