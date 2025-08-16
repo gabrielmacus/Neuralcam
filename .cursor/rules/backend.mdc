@@ -69,6 +69,27 @@ Código que reacciona a determinados eventos. La clase debe tener el siguiente f
 
 No debe contener lógica a excepción de la llamada a un caso de uso, ya que tomamos el evento como un punto de entrada de la aplicación
 
+**REGLA CRÍTICA - DESACOPLAMIENTO ENTRE MÓDULOS:**
+Los event handlers NUNCA deben importar eventos de dominio directamente de otros módulos. Cuando un event handler necesite escuchar un evento de otro módulo:
+
+1. **Crear evento de integración local**: En lugar de importar `OtroModuloEvent`, crear `OtroModuloIntegrationEvent` en el módulo receptor
+2. **Ubicación**: Los eventos de integración van en `Domain/Events/` del módulo receptor  
+3. **Nomenclatura**: Misma estructura que el evento original pero con sufijo `IntegrationEvent`
+4. **Contenido idéntico**: Mismo contenido y `event_name` que el evento original
+
+Ejemplo INCORRECTO:
+```python
+# En Videos/Application/EventHandlers/
+from RecordingSessions.Domain.Events.FinishedRecordingSessionDomainEvent import FinishedRecordingSessionDomainEvent  # ❌ PROHIBIDO
+```
+
+Ejemplo CORRECTO:
+```python
+# 1. Crear Videos/Domain/Events/FinishedRecordingSessionIntegrationEvent.py
+# 2. En Videos/Application/EventHandlers/
+from ...Domain.Events.FinishedRecordingSessionIntegrationEvent import FinishedRecordingSessionIntegrationEvent  # ✅ CORRECTO
+```
+
 **Ruta:** /src/Contexts/{contexto}/{módulo}/Application/EventHandlers/
 
 #### Comandos
@@ -125,14 +146,6 @@ Módulo con código que se reutiliza en diferentes módulos. Puede ir a nivel de
 - /src/Contexts/{contexto}/SharedKernel
 
 
-## Integración
-
-### Eventos de integración
-Eventos que servirán para la comunicación entre módulos y bounded contexts. ej: ProductoCreadoEvent
-
-**Ruta:** /src/Contexts/{contexto}/{módulo}/Integracion/Events/
-
-
 ## Apps
 Aplicaciones que ejecutaran queries o comandos para comunicarse con . Puede ser una API, aplicación de consola, o cualquier otro tipo de punto de entrada. Este agente NO generará esta parte del sistema, por lo que omitirá crear controladores, inyectores de dependencias, servidores http, etc. En resumen, no se se toca esta parte.
 
@@ -158,4 +171,8 @@ Aplicaciones que ejecutaran queries o comandos para comunicarse con . Puede ser 
 * Evita agregar cosas que no te pedí a menos que este impícito que son requeridas
 * Óptimo: 10 líneassd o menos. Máximo: 20 líneas. Intenta crear métodos protegidos auxiliares para que el código sea más limpio.
 * Aplica metodologia fail-fast
-* Cuando se necesite reaccionar a un evento desde otro módulo o bounded context, se utilizara el manejador de evento IntegrationOnEvento, que lo que hara será disparar el evento de integración. De esta manera, se realizará la comunicación por eventos entre módulos y bounded contexts.
+* Los manejadores de eventos deben tener solo un mensaje de logging para debug y la llamada al caso de uso o comando correspondiente, según sea el caso, pero no más código que eso.
+* No generes ejemplos ni documentación
+* Actualiza las dependencias del pyproject.toml para que coincidan con las instaladas
+* Cuando modifiques código, si cambias una parte que afecta a otra, corrige el código afectado también. Ej: Eliminas el parámetro de una función, debes corregir los lugares donde dicha función está siendo llamada, eliminando el parámetro correspondiente.
+* Para desacoplar el código al comunicarnos entre módulos y bounded context, repetiremos los contratos entre módulos y bounded contexts. Ej: para eventos, en el módulo emisor lanzo ProductCreatedEvent, y en el receptor ProductCreatedIntegrationEvent, para queries y commands utilizo el mismo nombre, es decir, si en el modulo que tiene el query handler tengo ProductQuery, en el módulo que realiza la query tendre tambien el contrato ProductQuery.

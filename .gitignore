@@ -145,3 +145,6 @@ Thumbs.db
 *.backup
 *.out
 *.log
+
+# Ignore dynaconf secret files
+.secrets.*

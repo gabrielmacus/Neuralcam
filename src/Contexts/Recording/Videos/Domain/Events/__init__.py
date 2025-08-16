@@ -1,1 +1,2 @@
-# Eventos de dominio del módulo Videos 
+# Eventos de dominio del módulo Videos
+from .FinishedRecordingSessionIntegrationEvent import FinishedRecordingSessionIntegrationEvent

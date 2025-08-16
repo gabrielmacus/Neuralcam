@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Callable, Optional
 import av.logging
 from typing_extensions import override
 
@@ -46,6 +47,7 @@ class PyAvVideoRecorder(VideoRecorder):
         uri: Uri,
         output_path: OutputPath,
         duration_seconds: RecordingSessionDuration,
+        on_finished: Optional[Callable[[str], None]] = None,
     ):
         input = av.open(uri.value, format="rtsp", options=self.__get_input_options())
         output = av.open(output_path.value, mode="w")
@@ -64,8 +66,12 @@ class PyAvVideoRecorder(VideoRecorder):
             self.__logger.error(f"Stream no encontrado: {e}")
             raise e
         except Exception as e:
-            self.__logger.error(f"Error desconocido al grabar el video: {e}")
+            self.__logger.error(f"Error durante la grabación: {e}")
             raise e
         finally:
             input.close()
             output.close()
+
+        # Notificar que la grabación terminó
+        if on_finished:
+            on_finished(output_path.value)

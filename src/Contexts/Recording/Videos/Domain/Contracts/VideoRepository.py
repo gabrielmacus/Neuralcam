@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from ..Entities.Video import Video
 
 
@@ -16,5 +16,18 @@ class VideoRepository(ABC):
 
         Returns:
             Lista de videos encontrados
+        """
+        pass
+
+    @abstractmethod
+    def find_by_path(self, video_path: str) -> Optional[Video]:
+        """
+        Busca un video por su ruta específica
+
+        Args:
+            video_path: Ruta completa del video
+
+        Returns:
+            Video encontrado o None si no existe
         """
         pass

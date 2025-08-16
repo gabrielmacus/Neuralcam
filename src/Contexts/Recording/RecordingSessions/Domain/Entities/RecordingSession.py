@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from src.Contexts.SharedKernel.Domain.AggregateRoot import AggregateRoot
 
 from ..Events.CreatedRecordingSessionDomainEvent import CreatedRecordingSessionDomainEvent
+from ..Events.FinishedRecordingSessionDomainEvent import FinishedRecordingSessionDomainEvent
 from ..ValueObjects.RecordingSessionId import RecordingSessionId
 from ..ValueObjects.StartDate import StartDate
 from .Profile import Profile
@@ -21,6 +22,11 @@ class RecordingSession(AggregateRoot):
         self._profile = profile
         self._start_date = StartDate(start_date)
         self._created_at = datetime.now()
+
+    @property
+    def id(self) -> RecordingSessionId:
+        """Obtiene el ID de la sesión de grabación"""
+        return self._id
 
     @classmethod
     def create(
@@ -47,6 +53,21 @@ class RecordingSession(AggregateRoot):
 
         return recording_session
 
+    def finish(self, output_path: str) -> None:
+        """Marca la sesión de grabación como finalizada y dispara el evento correspondiente"""
+        end_date = datetime.now()
+
+        event = FinishedRecordingSessionDomainEvent(
+            recording_session_id=self._id.value,
+            profile_id=self._profile.id.value,
+            profile_name=self._profile.name.value,
+            start_date=self._start_date.value,
+            end_date=end_date,
+            duration_seconds=self._profile.duration.value,
+            output_path=output_path,
+        )
+        self.record_domain_event(event)
+
     def get_end_datetime(self) -> datetime:
         return self._start_date.value + timedelta(seconds=self._profile.duration.value)
 
@@ -70,10 +91,6 @@ class RecordingSession(AggregateRoot):
         return max(0, int(remaining_time.total_seconds()))
 
     # Propiedades de solo lectura
-    @property
-    def id(self) -> RecordingSessionId:
-        return self._id
-
     @property
     def profile(self) -> Profile:
         return self._profile
