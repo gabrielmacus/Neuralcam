@@ -1,0 +1,1 @@
+# SharedKernel Infrastructure Services tests package

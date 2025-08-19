@@ -1,0 +1,1 @@
+# SharedKernel tests package
